@@ -1,0 +1,22 @@
+artifact_path: file:C:/Users/Puchu/Desktop/loan-default-mlops/mlruns/1/models/m-6b54b6724cba40ca90fafbc6e756234b/artifacts
+flavors:
+  python_function:
+    data: model.ubj
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.xgboost
+    python_version: 3.12.10
+  xgboost:
+    code: null
+    data: model.ubj
+    model_class: xgboost.sklearn.XGBClassifier
+    model_format: ubj
+    xgb_version: 3.2.0
+mlflow_version: 3.13.0
+model_id: m-6b54b6724cba40ca90fafbc6e756234b
+model_size_bytes: 411934
+model_uuid: m-6b54b6724cba40ca90fafbc6e756234b
+prompts: null
+run_id: 122b2831b49f4fa984484b1bddd224a2
+utc_time_created: '2026-06-05 15:29:38.150475'
