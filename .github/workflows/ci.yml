@@ -17,10 +17,16 @@ jobs:
         python-version: '3.12'
 
     - name: Install dependencies
-      run: pip install pandas scikit-learn xgboost mlflow fastapi uvicorn evidently==0.4.30
+      run: pip install pandas scikit-learn xgboost mlflow fastapi uvicorn kaggle
+
+    - name: Download dataset
+      env:
+        KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+        KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+      run: |
+        mkdir -p data
+        kaggle competitions download -c home-credit-default-risk -f application_train.csv -p data/
+        cd data && unzip application_train.csv.zip && cd ..
 
     - name: Run training script
       run: python src/train.py
-
-    - name: Check mlruns exists
-      run: ls mlruns/

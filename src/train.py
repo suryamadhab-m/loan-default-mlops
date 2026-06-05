@@ -6,7 +6,7 @@ import mlflow
 import mlflow.xgboost
 
 # Load data
-df = pd.read_csv(r"C:\Users\Puchu\Desktop\loan-default-mlops\data\application_train.csv")
+df = pd.read_csv("data/application_train.csv")
 
 # Basic preprocessing
 df = df[['TARGET', 'AMT_CREDIT', 'AMT_INCOME_TOTAL', 
