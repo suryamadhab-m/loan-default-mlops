@@ -5,10 +5,10 @@ from xgboost import XGBClassifier
 from sqlalchemy import create_engine
 import mlflow
 import mlflow.xgboost
-
+import os
 # Load data from PostgreSQL
 print("Loading data from PostgreSQL...")
-engine = create_engine('postgresql://postgres:postgres123@localhost:5432/loandb')
+engine = create_engine(os.getenv('DB_URL', 'postgresql://postgres:postgres123@localhost:5432/loandb'))
 df = pd.read_sql('SELECT * FROM loan_applications', engine)
 
 # Split features and target

@@ -8,6 +8,21 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres123
+          POSTGRES_DB: loandb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
     - uses: actions/checkout@v3
 
@@ -17,7 +32,7 @@ jobs:
         python-version: '3.12'
 
     - name: Install dependencies
-      run: pip install pandas scikit-learn xgboost mlflow fastapi uvicorn kaggle
+      run: pip install pandas scikit-learn xgboost mlflow fastapi uvicorn kaggle psycopg2-binary sqlalchemy
 
     - name: Download dataset
       env:
@@ -28,5 +43,12 @@ jobs:
         kaggle competitions download -c home-credit-default-risk -f application_train.csv -p data/
         cd data && unzip application_train.csv.zip && cd ..
 
+    - name: Load data to PostgreSQL
+      run: python src/load_data.py
+      env:
+        DB_URL: postgresql://postgres:postgres123@localhost:5432/loandb
+
     - name: Run training script
       run: python src/train.py
+      env:
+        DB_URL: postgresql://postgres:postgres123@localhost:5432/loandb

@@ -2,7 +2,8 @@ import pandas as pd
 from sqlalchemy import create_engine
 
 # PostgreSQL connection
-engine = create_engine('postgresql://postgres:postgres123@localhost:5432/loandb')
+import os
+engine = create_engine(os.getenv('DB_URL', 'postgresql://postgres:postgres123@localhost:5432/loandb'))
 
 # Load CSV
 print("Loading CSV...")
