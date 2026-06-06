@@ -7,7 +7,7 @@ engine = create_engine(os.getenv('DB_URL', 'postgresql://postgres:postgres123@lo
 
 # Load CSV
 print("Loading CSV...")
-df = pd.read_csv(r"C:\Users\Puchu\Desktop\loan-default-mlops\data\application_train.csv", usecols=[
+df = pd.read_csv("data/application_train.csv", usecols=[
     'TARGET', 'AMT_CREDIT', 'AMT_INCOME_TOTAL',
     'AMT_ANNUITY', 'DAYS_BIRTH', 'DAYS_EMPLOYED'
 ]).dropna()
