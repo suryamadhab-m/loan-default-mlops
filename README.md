@@ -16,21 +16,21 @@ A digital lending organisation requires a predictive model to identify borrowers
 ## Architecture
 
 ```
-Data (PostgreSQL/CSV)
-        ↓
-Data Validation (Great Expectations)
-        ↓
-Model Training (XGBoost) → Experiment Tracking (MLflow)
-        ↓
-Model Registry (MLflow)
-        ↓
-REST API (FastAPI + Docker)
-        ↓
-Drift Monitoring (Evidently AI)
-        ↓
-Auto Retraining (Apache Airflow) ← triggered on drift
-        ↓
-CI/CD (GitHub Actions)
+CSV Data (Kaggle)
+      ↓
+load_data.py → PostgreSQL Database (307,499 rows)
+      ↓
+train.py → Data Validation → XGBoost Training → MLflow Experiment Tracking
+      ↓
+MLflow Model Registry
+      ↓
+FastAPI REST API → Docker Container
+      ↓
+Evidently AI Drift Monitoring
+      ↓
+Auto Retraining (triggered on drift)
+      ↓
+GitHub Actions CI/CD (runs on every commit)
 ```
 
 ---
@@ -39,15 +39,14 @@ CI/CD (GitHub Actions)
 
 | Component | Tool |
 |---|---|
+| Database | PostgreSQL 18 |
 | Model | XGBoost |
 | Experiment Tracking | MLflow |
-| Data Validation | Great Expectations |
-| Pipeline Orchestration | Apache Airflow |
 | API Serving | FastAPI |
 | Containerisation | Docker |
-| Drift Monitoring | Evidently AI |
+| Drift Monitoring | Evidently AI 0.4.30 |
 | CI/CD | GitHub Actions |
-| Database | PostgreSQL |
+| DB ORM | SQLAlchemy + psycopg2 |
 | Language | Python 3.12 |
 
 ---
@@ -58,11 +57,13 @@ CI/CD (GitHub Actions)
 loan-default-mlops/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml          # GitHub Actions CI pipeline
-├── data/                   # Dataset (not tracked in git)
-├── models/                 # Saved model files
+│       └── ci.yml          # GitHub Actions CI/CD pipeline
+├── data/                   # Dataset folder (not tracked in git)
+├── models/
+│   └── model.xgb           # Saved XGBoost model file
 ├── notebooks/              # EDA notebooks
 ├── src/
+│   ├── load_data.py        # Load CSV into PostgreSQL database
 │   ├── train.py            # Model training + MLflow tracking
 │   ├── app.py              # FastAPI prediction service
 │   └── monitor.py          # Evidently AI drift report
@@ -75,6 +76,12 @@ loan-default-mlops/
 
 ## Getting Started
 
+### Prerequisites
+- Python 3.12
+- PostgreSQL 18 (running locally on port 5432)
+- Docker Desktop
+- Kaggle account (for dataset download)
+
 ### 1. Clone the repository
 ```bash
 git clone https://github.com/suryamadhab-m/loan-default-mlops.git
@@ -86,33 +93,49 @@ cd loan-default-mlops
 pip install -r requirements.txt
 ```
 
-### 3. Download dataset
+### 3. Add PostgreSQL to PATH (Windows)
+```bash
+$env:PATH += ";C:\Program Files\PostgreSQL\18\bin"
+```
+
+### 4. Create the database
+```bash
+psql -U postgres -c "CREATE DATABASE loandb;"
+```
+
+### 5. Download dataset
 Download `application_train.csv` from the [Home Credit Default Risk](https://www.kaggle.com/competitions/home-credit-default-risk/data) competition on Kaggle and place it in the `data/` folder.
 
-### 4. Train the model
+### 6. Load data into PostgreSQL (first time only)
+```bash
+python src/load_data.py
+```
+This loads 307,499 rows into the `loandb.loan_applications` table.
+
+### 7. Train the model
 ```bash
 python src/train.py
 ```
 
-### 5. View experiments in MLflow
+### 8. View experiments in MLflow
 ```bash
 python -m mlflow ui
 ```
 Open `http://127.0.0.1:5000`
 
-### 6. Start the prediction API
+### 9. Start the prediction API
 ```bash
 python -m uvicorn src.app:app --reload
 ```
 Open `http://127.0.0.1:8000/docs`
 
-### 7. Run drift monitoring
+### 10. Generate drift report
 ```bash
 python src/monitor.py
+start drift_report.html
 ```
-Opens `drift_report.html` with Evidently AI dashboard.
 
-### 8. Run with Docker
+### 11. Run with Docker
 ```bash
 docker build -t loan-default-api .
 docker run -p 8000:8000 loan-default-api
@@ -121,6 +144,15 @@ docker run -p 8000:8000 loan-default-api
 ---
 
 ## API Usage
+
+### Check API is running
+
+**Endpoint:** `GET /`
+
+**Response:**
+```json
+{"message": "Loan Default Prediction API"}
+```
 
 ### Predict loan default
 
@@ -152,9 +184,11 @@ docker run -p 8000:8000 loan-default-api
 | Metric | Value |
 |---|---|
 | AUC Score | 0.6425 |
-| Algorithm | XGBoost |
-| Features | 5 (credit amount, income, annuity, age, employment) |
-| Training samples | ~307,000 |
+| Algorithm | XGBoost (n_estimators=100) |
+| Features used | 5 of 122 available |
+| Training rows | 307,499 |
+| Test split | 80/20 |
+| Database | PostgreSQL 18 (loandb) |
 
 ---
 
@@ -162,10 +196,24 @@ docker run -p 8000:8000 loan-default-api
 
 Every push to `main` automatically:
 1. Sets up Python 3.12 environment
-2. Installs all dependencies
-3. Downloads the dataset from Kaggle
-4. Runs the training script
-5. Validates the pipeline end-to-end
+2. Starts a PostgreSQL 15 service container
+3. Installs all dependencies including psycopg2-binary
+4. Downloads the dataset from Kaggle using API secrets
+5. Loads data into the CI PostgreSQL database
+6. Runs the training script end-to-end
+7. Reports success or failure
+
+**Required GitHub Secrets:**
+- `KAGGLE_USERNAME` — your Kaggle username
+- `KAGGLE_KEY` — your Kaggle API key
+
+---
+
+## Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| DB_URL | postgresql://postgres:postgres123@localhost:5432/loandb | PostgreSQL connection string |
 
 ---
 
@@ -182,6 +230,7 @@ Every push to `main` automatically:
 
 ## Author
 
-**Surya Madhab Moharana**  
-B.Tech Computer Science, ITER — SOA University (2027 batch)  
+**Suryamadhab Moharana**
+B.Tech Computer Science, ITER — SOA University (2027 batch)
 TCS Xcelerate Capstone — MLOps Domain
+GitHub: suryamadhab-m
