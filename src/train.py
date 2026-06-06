@@ -2,16 +2,14 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
 from xgboost import XGBClassifier
+from sqlalchemy import create_engine
 import mlflow
 import mlflow.xgboost
 
-# Load data
-df = pd.read_csv("data/application_train.csv")
-
-# Basic preprocessing
-df = df[['TARGET', 'AMT_CREDIT', 'AMT_INCOME_TOTAL', 
-         'AMT_ANNUITY', 'DAYS_BIRTH', 'DAYS_EMPLOYED']]
-df = df.dropna()
+# Load data from PostgreSQL
+print("Loading data from PostgreSQL...")
+engine = create_engine('postgresql://postgres:postgres123@localhost:5432/loandb')
+df = pd.read_sql('SELECT * FROM loan_applications', engine)
 
 # Split features and target
 X = df.drop('TARGET', axis=1)
